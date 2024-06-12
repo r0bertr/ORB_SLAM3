@@ -44,7 +44,7 @@ namespace ORB_SLAM3
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq):
     mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
-    mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
+    mbReadyToInitializate(false), mpSystem(pSys), bStepByStep(false),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
 {
@@ -1434,11 +1434,6 @@ void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)
     mpLoopClosing=pLoopClosing;
 }
 
-void Tracking::SetViewer(Viewer *pViewer)
-{
-    mpViewer=pViewer;
-}
-
 void Tracking::SetStepByStep(bool bSet)
 {
     bStepByStep = bSet;
@@ -1461,6 +1456,7 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
 
     if(mImGray.channels()==3)
     {
+        mImGray.copyTo(mImRGB);
         //cout << "Image with 3 channels" << endl;
         if(mbRGB)
         {
@@ -1475,6 +1471,7 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
     }
     else if(mImGray.channels()==4)
     {
+        mImGray.copyTo(mImRGB);
         //cout << "Image with 4 channels" << endl;
         if(mbRGB)
         {
@@ -1524,6 +1521,7 @@ Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, co
 
     if(mImGray.channels()==3)
     {
+        mImGray.copyTo(mImRGB);
         if(mbRGB)
             cvtColor(mImGray,mImGray,cv::COLOR_RGB2GRAY);
         else
@@ -1531,6 +1529,7 @@ Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, co
     }
     else if(mImGray.channels()==4)
     {
+        mImGray.copyTo(mImRGB);
         if(mbRGB)
             cvtColor(mImGray,mImGray,cv::COLOR_RGBA2GRAY);
         else
@@ -1568,6 +1567,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     mImGray = im;
     if(mImGray.channels()==3)
     {
+        mImGray.copyTo(mImRGB);
         if(mbRGB)
             cvtColor(mImGray,mImGray,cv::COLOR_RGB2GRAY);
         else
@@ -1575,6 +1575,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     }
     else if(mImGray.channels()==4)
     {
+        mImGray.copyTo(mImRGB);
         if(mbRGB)
             cvtColor(mImGray,mImGray,cv::COLOR_RGBA2GRAY);
         else
@@ -2199,8 +2200,8 @@ void Tracking::Track()
 
         // Update drawer
         mpFrameDrawer->Update(this);
-        if(mCurrentFrame.isSet())
-            mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
+        // if(mCurrentFrame.isSet())
+        //     mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
 
         if(bOK || mState==RECENTLY_LOST)
         {
@@ -2215,8 +2216,8 @@ void Tracking::Track()
                 mbVelocity = false;
             }
 
-            if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
-                mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
+            // if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
+            //     mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
 
             // Clean VO matches
             for(int i=0; i<mCurrentFrame.N; i++)
@@ -2438,7 +2439,7 @@ void Tracking::StereoInitialization()
 
         mpAtlas->GetCurrentMap()->mvpKeyFrameOrigins.push_back(pKFini);
 
-        mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
+        // mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.GetPose());
 
         mState=OK;
     }
@@ -2649,7 +2650,7 @@ void Tracking::CreateInitialMapMonocular()
 
     mpAtlas->SetReferenceMapPoints(mvpLocalMapPoints);
 
-    mpMapDrawer->SetCurrentCameraPose(pKFcur->GetPose());
+    // mpMapDrawer->SetCurrentCameraPose(pKFcur->GetPose());
 
     mpAtlas->GetCurrentMap()->mvpKeyFrameOrigins.push_back(pKFini);
 
@@ -3780,13 +3781,6 @@ void Tracking::Reset(bool bLocMap)
 {
     Verbose::PrintMess("System Reseting", Verbose::VERBOSITY_NORMAL);
 
-    if(mpViewer)
-    {
-        mpViewer->RequestStop();
-        while(!mpViewer->isStopped())
-            usleep(3000);
-    }
-
     // Reset Local Mapping
     if (!bLocMap)
     {
@@ -3831,21 +3825,12 @@ void Tracking::Reset(bool bLocMap)
     mpLastKeyFrame = static_cast<KeyFrame*>(NULL);
     mvIniMatches.clear();
 
-    if(mpViewer)
-        mpViewer->Release();
-
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
 }
 
 void Tracking::ResetActiveMap(bool bLocMap)
 {
     Verbose::PrintMess("Active map Reseting", Verbose::VERBOSITY_NORMAL);
-    if(mpViewer)
-    {
-        mpViewer->RequestStop();
-        while(!mpViewer->isStopped())
-            usleep(3000);
-    }
 
     Map* pMap = mpAtlas->GetCurrentMap();
 
@@ -3921,9 +3906,6 @@ void Tracking::ResetActiveMap(bool bLocMap)
     mvIniMatches.clear();
 
     mbVelocity = false;
-
-    if(mpViewer)
-        mpViewer->Release();
 
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
 }
