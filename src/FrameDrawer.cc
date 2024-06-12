@@ -27,11 +27,11 @@
 namespace ORB_SLAM3
 {
 
-FrameDrawer::FrameDrawer(Atlas* pAtlas):both(false),mpAtlas(pAtlas)
+FrameDrawer::FrameDrawer(Atlas* pAtlas, int width, int height):both(false),mpAtlas(pAtlas)
 {
     mState=Tracking::SYSTEM_NOT_READY;
-    mIm = cv::Mat(480,640,CV_8UC3, cv::Scalar(0,0,0));
-    mImRight = cv::Mat(480,640,CV_8UC3, cv::Scalar(0,0,0));
+    mIm = cv::Mat(height,width,CV_8UC3, cv::Scalar(0,0,0));
+    mImRight = cv::Mat(height,width,CV_8UC3, cv::Scalar(0,0,0));
 }
 
 cv::Mat FrameDrawer::DrawFrame(float imageScale)
@@ -108,6 +108,8 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
 
     if(im.channels()<3) //this should be always true
         cvtColor(im,im,cv::COLOR_GRAY2BGR);
+    else if (im.channels()==3)
+        cvtColor(im,im,cv::COLOR_RGB2BGR);
 
     //Draw
     if(state==Tracking::NOT_INITIALIZED)
@@ -246,6 +248,8 @@ cv::Mat FrameDrawer::DrawRightFrame(float imageScale)
 
     if(im.channels()<3) //this should be always true
         cvtColor(im,im,cv::COLOR_GRAY2BGR);
+    else if (im.channels()==3)
+        cvtColor(im,im,cv::COLOR_RGB2BGR);
 
     //Draw
     if(state==Tracking::NOT_INITIALIZED) //INITIALIZING
@@ -370,7 +374,10 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 void FrameDrawer::Update(Tracking *pTracker)
 {
     unique_lock<mutex> lock(mMutex);
-    pTracker->mImGray.copyTo(mIm);
+    // pTracker->mImGray.copyTo(mIm);
+    pTracker->mImRGB.copyTo(mIm);
+    if (mIm.type() == CV_32FC3)
+        mIm.convertTo(mIm, CV_8UC3, 255);
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
     mThDepth = pTracker->mCurrentFrame.mThDepth;
     mvCurrentDepth = pTracker->mCurrentFrame.mvDepth;

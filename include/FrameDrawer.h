@@ -35,13 +35,12 @@ namespace ORB_SLAM3
 {
 
 class Tracking;
-class Viewer;
 
 class FrameDrawer
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    FrameDrawer(Atlas* pAtlas);
+    FrameDrawer(Atlas* pAtlas, int width, int height);
 
     // Update info from the last processed frame.
     void Update(Tracking *pTracker);
