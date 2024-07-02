@@ -1389,6 +1389,10 @@ FrameDrawer* System::GetFrameDrawer() {
     return mpFrameDrawer;
 }
 
+Atlas* System::GetAtlas() {
+    return mpAtlas;
+}
+
 #ifdef REGISTER_TIMES
 void System::InsertRectTime(double& time)
 {

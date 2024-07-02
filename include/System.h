@@ -187,6 +187,8 @@ public:
     float GetImageScale();
 
     FrameDrawer* GetFrameDrawer();
+    
+    Atlas *GetAtlas(); 
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
